@@ -1,0 +1,19 @@
+
+N = 1000
+dt = 0.01
+    t = tmath.Matrix(N) 
+    e = tmath.Matrix(N)
+	a = tmath.Matrix(N)
+	F = tmath.Matrix(N)
+
+
+ for i=0, N-1 do
+    t[i] = i*dt
+	e[i] = 4*(math.exp(-0.25*t[i])-math.exp(-0.5*t[i]))
+	a[i] = e[i]*b[i]
+    F[i] = -400*a[i]
+ end
+ 
+ vis4 = graph.Graph("Filterfunction", "Bright")
+ vis4:AxisLabels("Time [s]", "Exponential filter [ ]")
+ vis4:Plot(t, e, 1, "Filter")
