@@ -28,7 +28,7 @@
  var = tmath.Sum(PSD)*2*domega
  
  vis1 = graph.Graph("Power Spectral Density", "Bright")
- vis1:AxisLabels("Omega [1/rad]", "PSD [m^2/s]")
+ vis1:AxisLabels("Omega [rad/sec]", "PSD [m^2/s]")
  vis1:Plot(omegas, PSD, 1, "PSD")
  
  SQPS = (PSD*ommax):CW():Sqrt()
@@ -40,7 +40,7 @@
  
  var1 = stoch.Sigma(b:Transpose())[0]^2
  t = tmath.Matrix(N)
- t:SetLinearRows(0,(N-1)*dt)
+ t:SetLinearRows(0,(N)*dt)
  
  vis2 = graph.Graph("Time series", "Bright")
  vis2:AxisLabels("Time [s]", "Acceleration [m/s^2]")
@@ -53,19 +53,29 @@
  F = tmath.Matrix(N)
  
  for i=0, N-1 do
-	e[i] = 4*(math.exp(-0.25*t[i])-math.exp(-0.5*t[i]))
-	a[i] = e[i]*b[i]
-    F[i] = -400*a[i]
+	e[i] = 4*(math.exp(-0.25*t[i])-math.exp(-0.5*t[i])) -- einheitenlos, werte von 0 bis 1 als filter
+	a[i] = e[i]*b[i]			-- m/s^2 (Bodenbeschleunigung)
+    F[i] = -400000*a[i] 		-- kg * m/s^2 = N
  end
  
- vis3 = graph.Graph("Loading", "Bright")
- vis3:AxisLabels("Time [s]", "Loading [kN]")
- vis3:Plot(t, F, 1, "Loading")
+ vis3 = graph.Graph("Filterfunction", "Bright")
+ vis3:AxisLabels("Time [s]", "Exponential envelope [-]")
+ vis3:Plot(t, e, 1, "envelope")
  
- m = 400
- b = .4
- I = b^4/12
- k = 12*210*I/6^3
+ vis4 = graph.Graph("Acceleration", "Bright")
+ vis4:AxisLabels("Time [s]", "Ground acceleration [m/s^2]")
+ vis4:Plot(t, a, 1, "Acceleration")
+
+ vis5 = graph.Graph("Loading Force", "Bright")
+ vis5:AxisLabels("Time [s]", "Groundforce [kN]")
+ vis5:Plot(t, F/1000, 1, "Force")
+ 
+ E = 210e9 			-- 210 GPa = 210*10^9 N/m^2
+ m = 400e3 			-- 400t = 400*10^3 kg
+ H = 6				-- 6m Stuetzenhoehe
+ b = .55
+ I = b^4/12 		-- Traegheitsmoment m^4
+ k = 4*12*E*I/H^3
  omega_0 = math.sqrt(k/m)
  c = 2*0.02*math.sqrt(k*m)
  time = 0;
@@ -88,6 +98,6 @@
 	result[{i,1}] = x0;
  end 
  
- vis4 = graph.Graph("Displacement", "Bright")
- vis4:AxisLabels("Time [s]", "Top Displacement [m]")
- vis4:Plot(result:GetCols(0), result:GetCols(1), 1, "Displacment")
+ vis6 = graph.Graph("Displacement", "Bright")
+ vis6:AxisLabels("Time [s]", "Top Displacement [cm]")
+ vis6:Plot(result:GetCols(0), result:GetCols(1)*100, 1, "Displacment")
