@@ -15,9 +15,9 @@
 	return ps, oms
   end
  
- N=3000
+ N=1500
  NN=N/2+1
- dt=0.01
+ dt=0.02
  ommax = math.pi/dt
  domega = ommax/NN
  
@@ -73,7 +73,7 @@
  E = 210e9 			-- 210 GPa = 210*10^9 N/m^2
  m = 400e3 			-- 400t = 400*10^3 kg
  H = 6				-- 6m Stuetzenhoehe
- b = .55
+ b = .5
  I = b^4/12 		-- Traegheitsmoment m^4
  k = 4*12*E*I/H^3
  omega_0 = math.sqrt(k/m)

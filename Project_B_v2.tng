@@ -10,6 +10,7 @@
 	NN=N/2+1
 	dt=0.01								-- Laenge der timesteps (N*dt=Laenge[sec])
 	br = 0.45							-- Breite der Stuetze
+	num_samples = 10					-- Anzahl der Samples
  
  function psd(oms)
 	local N = oms:Rows()
@@ -87,17 +88,17 @@
 			j = j+1
 		end
 	end  
-	-- print ("Total number of peaks > 0.1m found:", j)		-- bugfix fuer peaks detection pro sample
+	print ("Total number of peaks > 0.1m found:", j)		-- bugfix fuer peaks detection pro sample
 	return j
  end 
 
  function probability(br)
 	local total_prob = 0;
-	for iv = 0, 100 do
+	for iv = 0, num_samples do
 		total_prob = total_prob + peak_sample(br)/N
 	end
-	print("Probability", total_prob/100, "mit einer Breite", br)
-	return total_prob/100
+	print("Probability", total_prob/num_samples, "mit einer Breite", br)
+	return total_prob/num_samples
  end
  
  while probability(br) > 0.001 do
