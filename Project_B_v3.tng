@@ -1,0 +1,118 @@
+--[[
+ Project B of course of stochastics in mechanics
+ Ralf Lampert, Philipp Egger, Michael Fuchs
+ 2013 Vienna University of Technology
+ --]]
+ 
+ 
+ -- Starting values:
+ 	N=1500								-- Anzahl der timesteps
+	NN=N/2+1
+	dt=0.01								-- Laenge der timesteps (N*dt=Laenge[sec])
+	br = 0.55							-- Breite der Stuetze
+	num_samples = 10000					-- Anzahl der Samples
+ 
+ function psd(oms)
+	local N = oms:Rows()
+	local ps = tmath.Matrix(N)
+	for i=0, N-1 do
+		local omega = oms[i]
+		ps[i] = 1.0*(4*0.3^2*18^2*omega^2+18^4)/((18^2-omega^2)^2+4*0.3^2*18^2*omega^2)
+	end
+	return ps, oms
+  end
+ 
+ 
+ function loading(br)
+	 ommax = math.pi/dt
+	 domega = ommax/NN
+	 omegas = tmath.Matrix(NN)
+	 omegas:SetLinearRows(0, ommax)
+	 PSD = psd(omegas);	 
+	 SQPS = (PSD*ommax):CW():Sqrt()
+	 re = stoch.Simulate(NN,1):CW()*SQPS
+	 im = stoch.Simulate(NN,1):CW()*SQPS
+	 b, dt = spectral.IFT(re:AppendCols(im), domega)
+	 t = tmath.Matrix(N)
+	 t:SetLinearRows(0,(N)*dt)
+	 e = tmath.Matrix(N)
+	 a = tmath.Matrix(N)
+	 F = tmath.Matrix(N)
+	 
+	 for i=0, N-1 do
+		e[i] = 4*(math.exp(-0.25*t[i])-math.exp(-0.5*t[i])) -- einheitenlos, werte von 0 bis 1 als filter
+		a[i] = e[i]*b[i]				-- Bodenbeschleunigung [m/s^2]
+		F[i] = -400000*a[i]				-- Krafteinwirkung [kg * m/s^2 = N
+	 end
+		-- vis1 = graph.Graph("Acceleration", "Bright")	-- bugfix fuer random force pro sample
+		-- vis1:AxisLabels("Time [s]", "Force [kN]")
+		-- vis1:Plot(t, F/1000, 1, "Acceleration")
+	    -- control.Pause("pause")
+	 return F
+ end
+ 
+ function displacement(br) 
+	 local E = 210e9 				-- 210 GPa = 210*10^9 [N/m^2]
+	 local m = 400e3 				-- 400t = 400*10^3 [kg]
+	 local H = 6 					-- 6m Stuetzenhoehe [m]
+	 local I = br^4/12 				-- Traegheitsmoment [m^4]
+	 local k = 4*12*E*I/H^3			-- Federsteifigkeit fuer 4 Stuetzen
+	 local omega_0 = math.sqrt(k/m)
+	 local c = 2*0.02*math.sqrt(k*m)
+	 local time = 0;
+	 local x0 = 0;
+	 local v0 = 0;
+	 local a0 = -(c*v0+k*x0)/m
+	 local xm1 = x0 -a0*dt*dt/2
+	 result = tmath.Matrix(N,2)
+	 result[{0,0}] = time;
+	 result[{0,1}] = x0;
+	 F = loading(br)
+	 for ii=0, N-1 do
+		a1 = F[ii] - (k-2/dt^2*m)*x0 - (m/dt^2-c/2/dt)*xm1;
+		x1 = a1/(m/dt^2+c/2/dt);
+		xm1 = x0;
+		x0 = x1;
+		time = ii*dt;
+		result[{ii,0}] = time;
+		result[{ii,1}] = x0;
+	 end 
+	 return result:GetCols(1)
+ end
+	
+ function peak_sample(br)
+	j = 0;
+	local disp = displacement(br)
+	for iii = 0, N-1 do 
+		if math.max(math.abs(disp[iii])) > 0.1 then
+			j = 1
+		end
+	end  
+	-- print ("Peak > 0.1m found  [0/1]:", j)		-- bugfix fuer peaks detection pro sample
+	return j
+ end 
+
+ function probability(br)
+	total_prob = 0
+	num_loops = 0
+	total_loops = 0
+		for iv = 0, num_samples do
+			total_prob = total_prob + peak_sample(br)
+			num_loops = num_loops + 1
+			if total_prob/num_samples > 0.001 then
+				total_loops = total_loops + num_loops
+				print("Probability exceeded for width:", br, "after", num_loops, "loops", total_loops)
+				br = br + .01
+				total_prob = 0
+				num_loops = 0
+			end
+		end
+	return total_prob/num_samples, br, total_loops
+ end
+ 
+ Pe, width, totals_loops = probability(br)
+ 
+ if Pe <= 0.001 then
+ 	print("Probability1 of 0.001 reached, with total width of:", width, "after", total_loops + num_samples, "loops")
+ end
+ 
