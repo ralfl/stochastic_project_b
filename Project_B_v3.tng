@@ -3,13 +3,16 @@
  Ralf Lampert, Philipp Egger, Michael Fuchs
  2013 Vienna University of Technology
  --]]
- 
- 
+  
  -- Starting values:
+	E = 210e9 							-- 210 GPa = 210*10^9 [N/m^2]
+	m = 400e3 							-- 400t = 400*10^3 [kg]
+	H = 6 								-- 6m Stuetzenhoehe [m]
  	N=1500								-- Anzahl der timesteps
 	NN=N/2+1
 	dt=0.01								-- Laenge der timesteps (N*dt=Laenge[sec])
-	br = 0.55							-- Breite der Stuetze
+	br = 0.55							-- Startbreite der Stuetze
+	br_step = 0.01						-- Schrittweite der Stuetzenbreitenerhoehung	
 	num_samples = 10000					-- Anzahl der Samples
  
  function psd(oms)
@@ -22,22 +25,21 @@
 	return ps, oms
   end
  
- 
  function loading(br)
-	 ommax = math.pi/dt
-	 domega = ommax/NN
-	 omegas = tmath.Matrix(NN)
-	 omegas:SetLinearRows(0, ommax)
-	 PSD = psd(omegas);	 
-	 SQPS = (PSD*ommax):CW():Sqrt()
-	 re = stoch.Simulate(NN,1):CW()*SQPS
-	 im = stoch.Simulate(NN,1):CW()*SQPS
-	 b, dt = spectral.IFT(re:AppendCols(im), domega)
-	 t = tmath.Matrix(N)
+	local ommax = math.pi/dt
+	local domega = ommax/NN
+	local omegas = tmath.Matrix(NN)
+	omegas:SetLinearRows(0, ommax)
+	local PSD = psd(omegas);	 
+	local SQPS = (PSD*ommax):CW():Sqrt()
+	local re = stoch.Simulate(NN,1):CW()*SQPS
+	local im = stoch.Simulate(NN,1):CW()*SQPS
+	local b, dt = spectral.IFT(re:AppendCols(im), domega)
+	local t = tmath.Matrix(N)
 	 t:SetLinearRows(0,(N)*dt)
-	 e = tmath.Matrix(N)
-	 a = tmath.Matrix(N)
-	 F = tmath.Matrix(N)
+	local e = tmath.Matrix(N)
+	local a = tmath.Matrix(N)
+	local F = tmath.Matrix(N)
 	 
 	 for i=0, N-1 do
 		e[i] = 4*(math.exp(-0.25*t[i])-math.exp(-0.5*t[i])) -- einheitenlos, werte von 0 bis 1 als filter
@@ -52,9 +54,6 @@
  end
  
  function displacement(br) 
-	 local E = 210e9 				-- 210 GPa = 210*10^9 [N/m^2]
-	 local m = 400e3 				-- 400t = 400*10^3 [kg]
-	 local H = 6 					-- 6m Stuetzenhoehe [m]
 	 local I = br^4/12 				-- Traegheitsmoment [m^4]
 	 local k = 4*12*E*I/H^3			-- Federsteifigkeit fuer 4 Stuetzen
 	 local omega_0 = math.sqrt(k/m)
@@ -64,18 +63,20 @@
 	 local v0 = 0;
 	 local a0 = -(c*v0+k*x0)/m
 	 local xm1 = x0 -a0*dt*dt/2
-	 result = tmath.Matrix(N,2)
+	 local result = tmath.Matrix(N,2)
 	 result[{0,0}] = time;
 	 result[{0,1}] = x0;
 	 F = loading(br)
 	 for ii=0, N-1 do
-		a1 = F[ii] - (k-2/dt^2*m)*x0 - (m/dt^2-c/2/dt)*xm1;
-		x1 = a1/(m/dt^2+c/2/dt);
+		local a1 = F[ii] - (k-2/dt^2*m)*x0 - (m/dt^2-c/2/dt)*xm1;
+		local x1 = a1/(m/dt^2+c/2/dt);
 		xm1 = x0;
 		x0 = x1;
 		time = ii*dt;
 		result[{ii,0}] = time;
 		result[{ii,1}] = x0;
+		disp = tmath.Matrix(1)
+		disp = result:GetCols(1)
 	 end 
 	 return result:GetCols(1)
  end
@@ -93,16 +94,16 @@
  end 
 
  function probability(br)
-	total_prob = 0
-	num_loops = 0
-	total_loops = 0
+	local total_prob = 0
+	local num_loops = 0
+	local total_loops = 0
 		for iv = 0, num_samples do
 			total_prob = total_prob + peak_sample(br)
 			num_loops = num_loops + 1
 			if total_prob/num_samples > 0.001 then
 				total_loops = total_loops + num_loops
 				print("Probability exceeded for width:", br, "after", num_loops, "loops", total_loops)
-				br = br + .01
+				br = br + br_step
 				total_prob = 0
 				num_loops = 0
 			end
@@ -110,9 +111,14 @@
 	return total_prob/num_samples, br, total_loops
  end
  
- Pe, width, totals_loops = probability(br)
+ Pe, width, total_loops = probability(br)
  
  if Pe <= 0.001 then
- 	print("Probability1 of 0.001 reached, with total width of:", width, "after", total_loops + num_samples, "loops")
+ 	print("Probability of 0.001 reached, with total columnwidth of:", width, "after", total_loops + num_samples, "total loops")
  end
+ 
+ I = width^4/12 			-- Traegheitsmoment [m^4] mit der Endbreite
+ k = 4*12*E*I/H^3			-- Federsteifigkeit fuer 4 Stuetzen
+ omega_final = math.sqrt(k/m)/(2*math.pi)   -- Frequenz des Endsystems
+ print("Final system frequency", omega_final)
  
