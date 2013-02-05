@@ -11,8 +11,8 @@
  	N=1500								-- Anzahl der timesteps
 	NN=N/2+1
 	dt=0.01								-- Laenge der timesteps (N*dt=Laenge[sec])
-	br = 0.55							-- Startbreite der Stuetze
-	br_step = 0.01						-- Schrittweite der Stuetzenbreitenerhoehung	
+	br = 0.58							-- Startbreite der Stuetze
+	br_step = 0.005						-- Schrittweite der Stuetzenbreitenerhoehung	
 	num_samples = 10000					-- Anzahl der Samples
  
  function psd(oms)
@@ -114,7 +114,7 @@
  Pe, width, total_loops = probability(br)
  
  if Pe <= 0.001 then
- 	print("Probability of 0.001 reached, with total columnwidth of:", width, "after", total_loops + num_samples, "total loops")
+ 	print("Probability of 0.001 reached, with total columnwidth of:", width, "after", total_loops+num_samples, "total loops")
  end
  
  I = width^4/12 			-- Traegheitsmoment [m^4] mit der Endbreite
