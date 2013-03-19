@@ -11,7 +11,7 @@
  	N=1500								-- Anzahl der timesteps
 	NN=N/2+1
 	dt=0.01								-- Laenge der timesteps (N*dt=Laenge[sec])
-	br = 0.58							-- Startbreite der Stuetze
+	br = 0.57							-- Startbreite der Stuetze
 	br_step = 0.005						-- Schrittweite der Stuetzenbreitenerhoehung	
 	num_samples = 10000					-- Anzahl der Samples
  
